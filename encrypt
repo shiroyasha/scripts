@@ -1,0 +1,43 @@
+#!/usr/bin/env ruby
+
+require "securerandom"
+
+def usage
+  puts "encrypt <github-user> <string>"
+  exit
+end
+
+user  = ARGV[0]
+value = ARGV[1]
+
+usage if user.nil? || value.nil?
+
+keys = `curl -Ls "https://github.com/#{user}.keys"`.split("\n")
+
+if keys.length == 0
+  abort "User has no public keys on Github"
+elsif keys.length == 1
+  key = keys.first
+else
+  keys.each.with_index do |key, index|
+    puts "#{index + 1}) #{key[0..50]}...#{key[-20..-1]}"
+  end
+
+  print "Choose key: "
+  answer = $stdin.gets.chomp.to_i
+
+  abort("Invalid option") unless answer > 0 && answer <= keys.length
+
+  key = keys[answer-1]
+end
+
+key_path = "/tmp/#{user}.pub"
+content_path = "/tmp/#{SecureRandom.uuid}"
+enc_content_path = "#{content_path}.enc"
+
+File.write(key_path, key)
+File.write(content_path, value)
+
+system("openssl enc -aes-256-cbc -salt -in #{content_path} -out #{enc_content_path} -pass file:#{key_path}")
+
+puts File.read(enc_content_path)
