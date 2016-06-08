@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+public_key=$1
+
+ssh-keygen -lf $public_key
